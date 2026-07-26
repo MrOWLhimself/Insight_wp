@@ -59,6 +59,16 @@ export type HousemateProfile = {
   published_at: string | null;
 };
 
+/** Fetch a category's own metadata (name, description) by slug. */
+export async function getCategoryInfo(categorySlug: string) {
+  const { data } = await supabasePublic
+    .from('insight_categories')
+    .select('id, name, description')
+    .eq('slug', categorySlug)
+    .single();
+  return data;
+}
+
 /** Fetch all published posts in a category, ordered by reveal_order. */
 export async function getCategoryPosts(categorySlug: string) {
   const { data: category } = await supabasePublic
