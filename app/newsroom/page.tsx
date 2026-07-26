@@ -8,6 +8,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { getCategoryPosts } from '@/lib/supabase-public';
+import { getSiteChrome } from '@/lib/site-chrome';
+import Masthead from '@/components/Masthead';
+import SideRailAds from '@/components/SideRailAds';
+import FeaturedPlaces from '@/components/FeaturedPlaces';
+import Footer from '@/components/Footer';
 
 export const revalidate = 60;
 
@@ -17,9 +22,12 @@ export const metadata = {
 };
 
 export default async function NewsroomPage() {
-  const posts = await getCategoryPosts('newsroom');
+  const [posts, chrome] = await Promise.all([getCategoryPosts('newsroom'), getSiteChrome()]);
 
   return (
+    <>
+      <Masthead navItems={chrome.navItems} siteSettings={chrome.siteSettings} />
+      <SideRailAds />
     <main className="mx-auto max-w-5xl px-4 py-10">
       <header className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight">Newsroom</h1>
@@ -55,6 +63,10 @@ export default async function NewsroomPage() {
       {posts.length === 0 && (
         <p className="text-gray-500">No articles published yet — check back soon.</p>
       )}
-    </main>
+      </main>
+
+      <FeaturedPlaces title="Featured Places" places={chrome.featuredPlaces} />
+      <Footer />
+    </>
   );
 }
