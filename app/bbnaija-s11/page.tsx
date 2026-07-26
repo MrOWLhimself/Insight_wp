@@ -6,7 +6,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { getCategoryPosts } from '@/lib/supabase-public';
+import { getCategoryPosts, getCategoryInfo } from '@/lib/supabase-public';
 
 export const revalidate = 60; // re-check for new/updated profiles every 60s
 
@@ -16,16 +16,39 @@ export const metadata = {
     'Every housemate profile from BBNaija Season 11 — name, age, state, personality, and what they said walking through the door.',
 };
 
+const BANNER_IMAGE_URL =
+  'https://cms.citiplug.com/wp-content/uploads/2026/07/HOLgHExXYAAOeQT.jpg';
+
 export default async function BBNaijaS11Page() {
-  const posts = await getCategoryPosts('bbnaija-s11');
+  const [posts, category] = await Promise.all([
+    getCategoryPosts('bbnaija-s11'),
+    getCategoryInfo('bbnaija-s11'),
+  ]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
+      <div className="relative mb-8 aspect-[16/7] w-full overflow-hidden rounded-lg bg-gray-100">
+        <Image
+          src={BANNER_IMAGE_URL}
+          alt="BBNaija Season 11 housemates"
+          fill
+          className="object-cover"
+          priority
+        />
+      </div>
+
       <header className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight">
           Meet Every BBNaija Season 11 Housemate
         </h1>
-        <p className="mt-2 text-gray-600">
+        {category?.description && (
+          <div className="prose mt-4 max-w-none text-gray-700">
+            {category.description.split('\n\n').map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        )}
+        <p className="mt-4 text-sm text-gray-500">
           Updated live as each housemate profile goes up — {posts.length} revealed so far.
         </p>
       </header>
