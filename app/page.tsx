@@ -8,6 +8,7 @@ import {
   type HomepageSection,
   type NavMenuItem,
 } from "@/lib/supabase";
+import { getCategoryPosts } from "@/lib/supabase-public";
 import Masthead from "@/components/Masthead";
 import Footer from "@/components/Footer";
 import AdSlot from "@/components/AdSlot";
@@ -19,6 +20,8 @@ import TrendingNow from "@/components/TrendingNow";
 import SideRailAds from "@/components/SideRailAds";
 import { HeroStory, HeroSideCard, StoryCard } from "@/components/StoryCard";
 import LatestPosts from "@/components/LatestPosts";
+import Link from "next/link";
+import Image from "next/image";
 import { SITE_URL } from "@/lib/config";
 import type { Metadata } from "next";
 
@@ -60,18 +63,27 @@ function navFallback(categories: { id: number; name: string; slug: string }[]): 
 }
 
 export default async function HomePage() {
-  const [categories, sections, navItems, siteSettings, promoCards, featuredPlaces] = await Promise.all([
-    getCategories(),
-    getHomepageSections(),
-    getNavMenu(),
-    getSiteSettings(),
-    getPromoCards(),
-    getFeaturedPlaces(),
-  ]);
+  const [categories, sections, navItems, siteSettings, promoCards, featuredPlaces, bbnaijaPosts, newsroomPosts] =
+    await Promise.all([
+      getCategories(),
+      getHomepageSections(),
+      getNavMenu(),
+      getSiteSettings(),
+      getPromoCards(),
+      getFeaturedPlaces(),
+      getCategoryPosts("bbnaija-s11"),
+      getCategoryPosts("newsroom"),
+    ]);
 
   const hero = sections.find((s) => s.display_type === "hero" && s.enabled);
   const spotlight = sections.find((s) => s.display_type === "spotlight" && s.enabled);
   const latest = sections.find((s) => s.display_type === "latest" && s.enabled);
+
+  // Show the 4 most recently published BBNaija profiles on the homepage.
+  const bbnaijaHomepagePosts = bbnaijaPosts.slice(0, 4);
+
+  // Show the 4 most recent Newsroom articles on the homepage.
+  const newsroomHomepagePosts = newsroomPosts.slice(0, 4);
 
   // "Flexible" sections render in the middle of the page, in whatever
   // order they're arranged in the CitiPlug admin's Insight → Sections tab —
@@ -162,6 +174,85 @@ export default async function HomePage() {
         />
 
         <TrendingNow />
+
+        <AdSlot slotKey="insight_home_bbnaija_promo" size="728×90" className="max-w-7xl mx-4 md:mx-auto my-9 h-[120px]" />
+
+        {bbnaijaHomepagePosts.length > 0 && (
+          <div className="max-w-7xl mx-auto px-6">
+            <section className="my-14">
+              <div className="flex items-center justify-between border-b border-rule pb-3 mb-8">
+                <h2 className="font-display font-extrabold text-3xl text-ink">
+                  BBNaija Season 11
+                </h2>
+                <Link href="/bbnaija-s11" className="text-sm font-semibold underline">
+                  Meet every housemate →
+                </Link>
+              </div>
+              <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12">
+                {bbnaijaHomepagePosts.map((post) => {
+                  const h = post.content?.housemate;
+                  return (
+                    <Link key={post.id} href={`/bbnaija-s11/${post.slug}`} className="group block">
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-gray-100">
+                        {post.cover_image_url && (
+                          <Image
+                            src={post.cover_image_url}
+                            alt={h?.known_as ?? post.title}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                          />
+                        )}
+                      </div>
+                      <h3 className="mt-2 font-semibold group-hover:underline">
+                        {h?.known_as ?? post.title}
+                      </h3>
+                      {h?.state_of_origin && (
+                        <p className="text-sm text-gray-500">{h.state_of_origin}</p>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {newsroomHomepagePosts.length > 0 && (
+          <div className="max-w-7xl mx-auto px-6">
+            <section className="my-14">
+              <div className="flex items-center justify-between border-b border-rule pb-3 mb-8">
+                <h2 className="font-display font-extrabold text-3xl text-ink">
+                  Newsroom
+                </h2>
+                <Link href="/newsroom" className="text-sm font-semibold underline">
+                  See all →
+                </Link>
+              </div>
+              <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12">
+                {newsroomHomepagePosts.map((post) => (
+                  <Link key={post.id} href={`/newsroom/${post.slug}`} className="group block">
+                    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg bg-gray-100">
+                      {post.cover_image_url && (
+                        <Image
+                          src={post.cover_image_url}
+                          alt={post.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                      )}
+                    </div>
+                    <h3 className="mt-2 font-semibold group-hover:underline">{post.title}</h3>
+                    {post.excerpt && (
+                      <p className="text-sm text-gray-500 line-clamp-2">{post.excerpt}</p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
 
         {flexibleSections.map((section, i) => (
           <div key={section.section_key}>
