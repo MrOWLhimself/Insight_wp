@@ -7,6 +7,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { getCategoryPosts, getCategoryInfo } from '@/lib/supabase-public';
+import BBNaijaLiveFeed from '@/components/BBNaijaLiveFeed';
 
 export const revalidate = 60; // re-check for new/updated profiles every 60s
 
@@ -37,21 +38,27 @@ export default async function BBNaijaS11Page() {
         />
       </div>
 
-      <header className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight">
-          Meet Every BBNaija Season 11 Housemate
-        </h1>
-        {category?.description && (
-          <div className="prose mt-4 max-w-none text-gray-700">
-            {category.description.split('\n\n').map((para: string, i: number) => (
-              <p key={i}>{para}</p>
-            ))}
-          </div>
-        )}
-        <p className="mt-4 text-sm text-gray-500">
-          Updated live as each housemate profile goes up — {posts.length} revealed so far.
-        </p>
-      </header>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <header className="mb-8 lg:col-span-2">
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            Meet Every BBNaija Season 11 Housemate
+          </h1>
+          {category?.description && (
+            <div className="prose mt-4 max-w-none text-gray-700">
+              {category.description.split('\n\n').map((para: string, i: number) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+          )}
+          <p className="mt-4 text-sm text-gray-500">
+            Updated live as each housemate profile goes up — {posts.length} revealed so far.
+          </p>
+        </header>
+
+        <div className="lg:col-span-1">
+          <BBNaijaLiveFeed />
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4">
         {posts.map((post) => {
