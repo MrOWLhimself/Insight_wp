@@ -43,7 +43,7 @@ export default async function BBNaijaS11Page() {
         </h1>
         {category?.description && (
           <div className="prose mt-4 max-w-none text-gray-700">
-            {category.description.split('\n\n').map((para, i) => (
+            {category.description.split('\n\n').map((para: string, i: number) => (
               <p key={i}>{para}</p>
             ))}
           </div>
