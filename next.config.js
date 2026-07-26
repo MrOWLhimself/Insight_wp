@@ -18,9 +18,18 @@ const nextConfig = {
         // Supabase Storage — logo uploads, team photos, promo card images.
         hostname: "uysipsegizbixwgvwdzl.supabase.co",
       },
+      {
+        protocol: "https",
+        // BellaNaija — source for BBNaija S11 housemate profile photos.
+        hostname: "www.bellanaija.com",
+      },
+      {
+        protocol: "https",
+        // Vanguard — source for a small number of BBNaija S11 photos.
+        hostname: "www.vanguardngr.com",
+      },
     ],
   },
-
   // news.citiplug.com used to serve WordPress directly, so old post links
   // (and anything Google already indexed) look like
   // news.citiplug.com/some-post-slug/ — WordPress's flat "post name"
@@ -50,5 +59,4 @@ const nextConfig = {
     ];
   },
 };
-
 module.exports = nextConfig;
