@@ -8,6 +8,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getCategoryPosts, getCategoryInfo } from '@/lib/supabase-public';
 import BBNaijaLiveFeed from '@/components/BBNaijaLiveFeed';
+import { getSiteChrome } from '@/lib/site-chrome';
+import Masthead from '@/components/Masthead';
+import SideRailAds from '@/components/SideRailAds';
+import FeaturedPlaces from '@/components/FeaturedPlaces';
+import Footer from '@/components/Footer';
 
 export const revalidate = 60; // re-check for new/updated profiles every 60s
 
@@ -21,12 +26,16 @@ const BANNER_IMAGE_URL =
   'https://cms.citiplug.com/wp-content/uploads/2026/07/HOLgHExXYAAOeQT.jpg';
 
 export default async function BBNaijaS11Page() {
-  const [posts, category] = await Promise.all([
+  const [posts, category, chrome] = await Promise.all([
     getCategoryPosts('bbnaija-s11'),
     getCategoryInfo('bbnaija-s11'),
+    getSiteChrome(),
   ]);
 
   return (
+    <>
+      <Masthead navItems={chrome.navItems} siteSettings={chrome.siteSettings} />
+      <SideRailAds />
     <main className="mx-auto max-w-5xl px-4 py-10">
       <div className="relative mb-8 aspect-[16/7] w-full overflow-hidden rounded-lg bg-gray-100">
         <Image
@@ -44,9 +53,9 @@ export default async function BBNaijaS11Page() {
             Meet Every BBNaija Season 11 Housemate
           </h1>
           {category?.description && (
-            <div className="prose mt-4 max-w-none text-gray-700">
+            <div className="mt-4 max-w-none text-gray-700">
               {category.description.split('\n\n').map((para: string, i: number) => (
-                <p key={i}>{para}</p>
+                <p key={i} className="mb-4 leading-relaxed">{para}</p>
               ))}
             </div>
           )}
@@ -100,6 +109,10 @@ export default async function BBNaijaS11Page() {
       {posts.length === 0 && (
         <p className="text-gray-500">No housemate profiles published yet — check back soon.</p>
       )}
-    </main>
+      </main>
+
+      <FeaturedPlaces title="Featured Places" places={chrome.featuredPlaces} />
+      <Footer />
+    </>
   );
 }
