@@ -10,10 +10,11 @@ import { getPostBySlug } from '@/lib/supabase-public';
 
 export const revalidate = 60;
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props) {
-  const post = await getPostBySlug(params.slug);
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
   if (!post) return {};
 
   return {
@@ -29,7 +30,8 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function HousemateProfilePage({ params }: Props) {
-  const post = await getPostBySlug(params.slug);
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
   if (!post) notFound();
 
   const h = post.content?.housemate;
