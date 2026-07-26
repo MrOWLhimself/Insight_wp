@@ -23,6 +23,15 @@ export const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { persistSession: false },
 });
 
+/**
+ * Kept for backward compatibility — components/AnalyticsTracker.tsx (and
+ * possibly other existing files) import this function name from this file.
+ * Do not remove; it just returns the same client instance above.
+ */
+export function getSupabasePublic() {
+  return supabasePublic;
+}
+
 export type HousemateProfile = {
   id: string;
   title: string;
