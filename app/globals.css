@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-body;
+    font-feature-settings: "ss01";
+  }
+
+  ::selection {
+    background: #f9731633;
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply font-mono uppercase text-[11px] tracking-eyebrow text-orange;
+  }
+
+  .rule {
+    @apply border-t border-rule;
+  }
+
+  /* Article body typography, applied to the raw WP content.rendered HTML */
+  .article-body {
+    @apply font-body text-[19px] leading-[1.7] text-ink;
+  }
+
+  .article-body p {
+    @apply mb-6;
+  }
+
+  .article-body h2 {
+    @apply font-display font-extrabold text-2xl mt-10 mb-4;
+  }
+
+  .article-body blockquote {
+    @apply border-l-2 border-orange pl-6 my-8 font-display text-2xl leading-snug text-ink;
+  }
+
+  .article-body img {
+    @apply w-full h-auto my-8;
+  }
+
+  .article-body figcaption {
+    @apply eyebrow mt-2 text-ink-soft normal-case tracking-normal;
+  }
+
+  .story-link {
+    @apply transition-colors duration-200;
+  }
+
+  .story-link:hover .story-title {
+    @apply text-orange;
+  }
+}
