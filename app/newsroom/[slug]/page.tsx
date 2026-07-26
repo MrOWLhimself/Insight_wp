@@ -9,6 +9,11 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { getPostBySlug } from '@/lib/supabase-public';
 import ShareBar from '@/components/ShareBar';
+import { getSiteChrome } from '@/lib/site-chrome';
+import Masthead from '@/components/Masthead';
+import SideRailAds from '@/components/SideRailAds';
+import FeaturedPlaces from '@/components/FeaturedPlaces';
+import Footer from '@/components/Footer';
 
 export const revalidate = 60;
 
@@ -41,12 +46,29 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function NewsroomArticlePage({ params }: Props) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const [post, chrome] = await Promise.all([getPostBySlug(slug), getSiteChrome()]);
   if (!post) notFound();
 
   const body = post.content?.body ?? [];
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.seo_title || post.title,
+    description: post.seo_description || post.excerpt || undefined,
+    image: post.cover_image_url || undefined,
+    datePublished: post.published_at || undefined,
+    dateModified: post.published_at || undefined,
+    mainEntityOfPage: post.canonical_url || undefined,
+    author: { '@type': 'Organization', name: 'Insight Magazine' },
+    publisher: { '@type': 'Organization', name: 'Insight Magazine' },
+  };
+
   return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Masthead navItems={chrome.navItems} siteSettings={chrome.siteSettings} />
+      <SideRailAds />
     <main className="mx-auto max-w-2xl px-4 py-10">
       {post.cover_image_url && (
         <div className="relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-lg bg-gray-100">
@@ -67,6 +89,10 @@ export default async function NewsroomArticlePage({ params }: Props) {
           block.type === 'paragraph' ? <p key={i} className="mb-4 leading-relaxed">{block.text}</p> : null
         )}
       </article>
-    </main>
+      </main>
+
+      <FeaturedPlaces title="Featured Places" places={chrome.featuredPlaces} />
+      <Footer />
+    </>
   );
 }
