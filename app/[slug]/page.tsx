@@ -36,14 +36,6 @@ export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string }> };
 
-// No "/posts/" or "/category/" prefix — a single flat namespace, same as
-// WordPress's own default permalink style. A given slug is resolved as a
-// WordPress post first (posts vastly outnumber categories, and this matches
-// how WordPress itself prioritizes a matching post/page over a category
-// archive when a slug could technically be either), then as a WordPress
-// category, then as a Supabase-authored post (Newsroom / BBNaija S11 /
-// any future insight_posts content), then 404.
-
 function navFallback(categories: { id: number; name: string; slug: string }[]): NavMenuItem[] {
   return categories.map((c, i) => ({
     category_id: c.id,
@@ -70,9 +62,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       openGraph: {
         title: yoast?.title ?? decodeEntities(post.title.rendered),
         description: yoast?.description,
-        // Only set an explicit image if an editor picked a custom social
-        // image in Yoast — otherwise the branded opengraph-image.tsx
-        // template is the only image Next.js generates for this page.
         ...(yoastImage ? { images: [yoastImage] } : {}),
         type: "article",
       },
@@ -118,8 +107,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {};
 }
 
-// Splits the raw WP HTML into chunks of `perChunk` top-level paragraphs,
-// so an <AdSlot> can be rendered between every N paragraphs of the body.
 function chunkArticleByParagraphs(html: string, perChunk: number) {
   const nodes = parse(html) as React.ReactNode[];
   const nodeArray = Array.isArray(nodes) ? nodes : [nodes];
@@ -140,11 +127,7 @@ function chunkArticleByParagraphs(html: string, perChunk: number) {
   return chunks.filter((c) => c.length > 0);
 }
 
-// Same idea for our own paragraph-array body format used by Supabase posts.
-// Body blocks can be paragraphs or inline images now. This just splits the
-// full ordered array roughly in half so an <AdSlot> can sit between them —
-// it no longer filters out non-paragraph blocks like the old version did.
-function splitBodyForAd<T>(body: T[]): [T[], T[]] {
+function splitBodyForAd(body: any[]): [any[], any[]] {
   const midpoint = Math.ceil(body.length / 2);
   return [body.slice(0, midpoint), body.slice(midpoint)];
 }
@@ -327,15 +310,6 @@ async function PostView({ post }: { post: Awaited<ReturnType<typeof getPostBySlu
   );
 }
 
-// ============================= Insight (Supabase) Post View =============================
-//
-// Same visual shell as PostView above (dark hero header, breadcrumbs, ad
-// slots, sticky sidebar with Recent Posts, ShareCard, Footer) but sourced
-// from Supabase (insight_posts) instead of WordPress, and rendering our
-// paragraph-array body format instead of raw HTML. This is what makes
-// /bbnaija-season-11-house-first-look (no folder prefix) work, alongside
-// any future post I publish to Newsroom or BBNaija S11.
-
 async function InsightPostView({
   post,
 }: {
@@ -348,7 +322,7 @@ async function InsightPostView({
     getAllPublishedPosts(10),
   ]);
 
-  const body = (post.content as any)?.body ?? [];
+  const body: any[] = (post.content as any)?.body ?? [];
   const gallery: string[] = (post.content as any)?.gallery ?? [];
   const [firstHalf, secondHalf] = splitBodyForAd(body);
   const recentPosts = recentAll.filter((p) => p.slug !== post.slug).slice(0, 5);
@@ -423,46 +397,54 @@ async function InsightPostView({
       <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-[1fr_300px] gap-14 items-start">
         <article>
           <div className="article-body">
-            {firstHalf.map((block, j) =>
-              block.type === "image" ? (
-                <div key={j} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
-                  <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
-                </div>
-              ) : block.type === "heading" ? (
-                <h3 key={j} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>
-              ) : block.type === "list" ? (
-                <ol key={j} className="mb-4 list-decimal pl-6 space-y-1">
-                  {(block.items || []).map((item: string, k: number) => (
-                    <li key={k}>{item}</li>
-                  ))}
-                </ol>
-              ) : (
-                <p key={j} className="mb-4 leading-relaxed">{block.text}</p>
-              )
-            )}
+            {firstHalf.map(function (block: any, j: number) {
+              if (block.type === "image") {
+                return (
+                  <div key={j} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
+                    <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
+                  </div>
+                );
+              } else if (block.type === "heading") {
+                return <h3 key={j} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>;
+              } else if (block.type === "list") {
+                return (
+                  <ol key={j} className="mb-4 list-decimal pl-6 space-y-1">
+                    {(block.items || []).map((item: string, k: number) => (
+                      <li key={k}>{item}</li>
+                    ))}
+                  </ol>
+                );
+              } else {
+                return <p key={j} className="mb-4 leading-relaxed">{block.text}</p>;
+              }
+            })}
           </div>
 
           {secondHalf.length > 0 && (
             <>
               <AdSlot slotKey="insight_article_inline" size="728×90" className="h-[120px] my-2 mb-8" />
               <div className="article-body">
-                {secondHalf.map((block, j) =>
-                  block.type === "image" ? (
-                    <div key={j} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
-                      <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
-                    </div>
-                  ) : block.type === "heading" ? (
-                    <h3 key={`b-${j}`} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>
-                  ) : block.type === "list" ? (
-                    <ol key={`b-${j}`} className="mb-4 list-decimal pl-6 space-y-1">
-                      {(block.items || []).map((item: string, k: number) => (
-                        <li key={k}>{item}</li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p key={`b-${j}`} className="mb-4 leading-relaxed">{block.text}</p>
-                  )
-                )}
+                {secondHalf.map(function (block: any, j: number) {
+                  if (block.type === "image") {
+                    return (
+                      <div key={j} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
+                        <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
+                      </div>
+                    );
+                  } else if (block.type === "heading") {
+                    return <h3 key={`b-${j}`} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>;
+                  } else if (block.type === "list") {
+                    return (
+                      <ol key={`b-${j}`} className="mb-4 list-decimal pl-6 space-y-1">
+                        {(block.items || []).map((item: string, k: number) => (
+                          <li key={k}>{item}</li>
+                        ))}
+                      </ol>
+                    );
+                  } else {
+                    return <p key={`b-${j}`} className="mb-4 leading-relaxed">{block.text}</p>;
+                  }
+                })}
               </div>
             </>
           )}
