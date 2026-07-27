@@ -13,7 +13,7 @@ export type WPPost = {
   excerpt: { rendered: string };
   content: { rendered: string };
   categories: number[];
-  meta?: { deck?: string };
+  meta?: { deck?: string; pixieset_url?: string };
   yoast_head_json?: {
     title?: string;
     description?: string;
