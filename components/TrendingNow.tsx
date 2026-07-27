@@ -2,16 +2,31 @@ import Link from "next/link";
 import Image from "next/image";
 import { getTrendingSlugs } from "@/lib/supabase";
 import { getPostBySlug, featuredImage, decodeEntities } from "@/lib/wordpress";
+import { getPostBySlug as getInsightPostBySlug } from "@/lib/supabase-public";
+import { adaptInsightPost } from "@/lib/insight-wp-adapter";
 
 export default async function TrendingNow() {
   const trending = await getTrendingSlugs(7, 6);
   if (trending.length === 0) return null;
 
-  const posts = await Promise.all(trending.map((t) => getPostBySlug(t.slug)));
-  const valid = posts
-    .map((post, i) => (post ? { post, views: trending[i].views } : null))
-    .filter(Boolean) as { post: NonNullable<Awaited<ReturnType<typeof getPostBySlug>>>; views: number }[];
+  const posts = await Promise.all(
+    trending.map(async (t) => {
+      // Try WordPress first (most posts still live there)...
+      const wpPost = await getPostBySlug(t.slug);
+      if (wpPost) return wpPost;
 
+      // ...and fall back to Supabase (Newsroom, BBNaija S11, any future
+      // insight_posts content) if it's not a WordPress post. Without this
+      // fallback, a trending Supabase-authored page would silently vanish
+      // here even while genuinely getting real views.
+      const insightPost = await getInsightPostBySlug(t.slug);
+      if (insightPost) return adaptInsightPost(insightPost);
+
+      return null;
+    })
+  );
+
+  const valid = posts.filter(Boolean) as NonNullable<(typeof posts)[number]>[];
   if (valid.length === 0) return null;
 
   return (
@@ -20,7 +35,7 @@ export default async function TrendingNow() {
         Trending Now
       </h2>
       <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
-        {valid.map(({ post, views }, i) => {
+        {valid.map((post, i) => {
           const img = featuredImage(post);
           return (
             <Link key={post.id} href={`/${post.slug}`} className="story-link group flex gap-4">
@@ -41,7 +56,6 @@ export default async function TrendingNow() {
                 <h3 className="story-title font-display font-bold text-base leading-snug">
                   {decodeEntities(post.title.rendered)}
                 </h3>
-                <span className="eyebrow block mt-1">{views} views this week</span>
               </div>
             </Link>
           );
