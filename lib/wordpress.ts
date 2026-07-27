@@ -8,6 +8,7 @@ export type WPPost = {
   id: number;
   slug: string;
   date: string;
+  date_gmt?: string;
   title: { rendered: string };
   excerpt: { rendered: string };
   content: { rendered: string };
@@ -105,6 +106,21 @@ export function primaryCategoryName(post: WPPost) {
 
 export function authorName(post: WPPost) {
   return post._embedded?.author?.[0]?.name ?? "Insight Editorial";
+}
+
+// Reliable UTC timestamp for sorting/comparing posts across sources.
+// WordPress's `date` field is site-local time with no timezone marker,
+// which can throw off direct comparisons against true UTC timestamps
+// (like Supabase's published_at). `date_gmt` is always UTC — use this
+// wherever posts from different sources need to be sorted together.
+export function getComparableDate(post: WPPost): number {
+  const raw = post.date_gmt ?? post.date;
+  // Only append "Z" if the string has no timezone marker at all — some
+  // sources (Supabase) already include a proper offset like "+00:00",
+  // and blindly appending "Z" to those would produce an invalid date.
+  const hasTimezone = /(Z|[+-]\d{2}:?\d{2})$/.test(raw);
+  const iso = hasTimezone ? raw : `${raw}Z`;
+  return new Date(iso).getTime();
 }
 
 // WordPress's "wptexturize" feature encodes smart quotes/dashes as HTML
