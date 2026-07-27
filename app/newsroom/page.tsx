@@ -1,140 +1,140 @@
-// lib/supabase-public.ts
+// app/newsroom/page.tsx
 //
-// A second, read-only Supabase client for pulling content that lives in the
-// database (insight_posts) rather than WordPress. Safe to use in Server
-// Components since it only ever reads publicly-published rows — RLS on
-// insight_posts already restricts anonymous access to status = 'published'.
-//
-// Add these two values to your Vercel project's Environment Variables
-// (Settings → Environment Variables) for Production, Preview, and Development:
-//
-//   NEXT_PUBLIC_SUPABASE_URL=https://uysipsegizbixwgvwdzl.supabase.co
-//   NEXT_PUBLIC_SUPABASE_ANON_KEY=<the anon/publishable key from your Supabase project settings>
-//
-// Don't hardcode the key directly in source — even though it's a public-safe
-// anon key, env vars keep it swappable if you ever rotate it.
+// Newsroom is the general landing page for everything published to Supabase
+// (insight_posts) across ALL categories — not filtered to one category.
+// Layout: a "News" list on the left, one big featured story in the center,
+// and a "Recent Posts" panel on the right — same idea as your homepage's
+// hero section, but sourced from Supabase instead of WordPress.
 
-import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
+import Image from 'next/image';
+import { getAllPublishedPosts, type PublishedPost } from '@/lib/supabase-public';
+import { getSiteChrome } from '@/lib/site-chrome';
+import Masthead from '@/components/Masthead';
+import SideRailAds from '@/components/SideRailAds';
+import FeaturedPlaces from '@/components/FeaturedPlaces';
+import Footer from '@/components/Footer';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export const revalidate = 60;
 
-export const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: false },
-});
-
-/**
- * Kept for backward compatibility — components/AnalyticsTracker.tsx (and
- * possibly other existing files) import this function name from this file.
- * Do not remove; it just returns the same client instance above.
- */
-export function getSupabasePublic() {
-  return supabasePublic;
-}
-
-export type HousemateProfile = {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string | null;
-  content: {
-    post_type: string;
-    housemate: {
-      known_as: string;
-      age?: number;
-      state_of_origin?: string;
-      occupation?: string;
-      personality_tags?: string[];
-      entry_quote?: string;
-      why_they_entered?: string;
-      first_impression?: string;
-      reveal_order?: number;
-    };
-    body: { type: string; text: string }[];
-  };
-  cover_image_url: string | null;
-  seo_title: string | null;
-  seo_description: string | null;
-  canonical_url: string | null;
-  published_at: string | null;
+export const metadata = {
+  title: 'Newsroom | Insight',
+  description: 'The latest news and features from Insight.',
 };
 
-export type PublishedPost = HousemateProfile & {
-  insight_categories?: { name: string; slug: string } | null;
-};
-
-/** Fetch the most recent published posts across ALL categories, with each
- *  post's category name/slug attached — used for the Newsroom landing page. */
-export async function getAllPublishedPosts(limit = 20) {
-  const { data, error } = await supabasePublic
-    .from('insight_posts')
-    .select(
-      'id, title, slug, excerpt, content, cover_image_url, seo_title, seo_description, canonical_url, published_at, insight_categories(name, slug)'
-    )
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('getAllPublishedPosts error:', error.message);
-    return [];
-  }
-  return data as unknown as PublishedPost[];
+function timeAgo(dateStr: string | null) {
+  if (!dateStr) return '';
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const hours = Math.floor(diffMs / 3600000);
+  if (hours < 1) return 'Just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
 }
 
-/** Fetch a category's own metadata (name, description) by slug. */
-export async function getCategoryInfo(categorySlug: string) {
-  const { data } = await supabasePublic
-    .from('insight_categories')
-    .select('id, name, description')
-    .eq('slug', categorySlug)
-    .single();
-  return data;
+function NewsListItem({ post }: { post: PublishedPost }) {
+  return (
+    <Link href={`/newsroom/${post.slug}`} className="group flex gap-3 py-3">
+      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-gray-100">
+        {post.cover_image_url && (
+          <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" />
+        )}
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+          {post.insight_categories?.name ?? 'News'} <span className="text-gray-400">/ {timeAgo(post.published_at)}</span>
+        </p>
+        <h3 className="mt-1 text-sm font-semibold leading-snug group-hover:underline">{post.title}</h3>
+      </div>
+    </Link>
+  );
 }
 
-/** Fetch all published posts in a category, ordered by reveal_order. */
-export async function getCategoryPosts(categorySlug: string) {
-  const { data: category } = await supabasePublic
-    .from('insight_categories')
-    .select('id')
-    .eq('slug', categorySlug)
-    .single();
+export default async function NewsroomPage() {
+  const [posts, chrome] = await Promise.all([getAllPublishedPosts(20), getSiteChrome()]);
 
-  if (!category) return [];
+  const [featured, ...rest] = posts;
+  const leftList = rest.slice(0, 6);
+  const rightList = rest.slice(6, 12);
+  const gridPosts = rest.slice(12);
 
-  const { data, error } = await supabasePublic
-    .from('insight_posts')
-    .select(
-      'id, title, slug, excerpt, content, cover_image_url, seo_title, seo_description, canonical_url, published_at'
-    )
-    .eq('category', category.id)
-    .eq('status', 'published')
-    .order('published_at', { ascending: false });
+  return (
+    <>
+      <Masthead navItems={chrome.navItems} siteSettings={chrome.siteSettings} />
+      <SideRailAds />
+    <main className="mx-auto max-w-7xl px-4 py-10">
+      <h1 className="mb-6 text-3xl font-extrabold tracking-tight">Newsroom</h1>
 
-  if (error) {
-    console.error('getCategoryPosts error:', error.message);
-    return [];
-  }
+      {featured && (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+          <div className="lg:col-span-1 divide-y divide-gray-100">
+            {leftList.map((post) => (
+              <NewsListItem key={post.id} post={post} />
+            ))}
+          </div>
 
-  // Sort by reveal_order when present (falls back to published_at order otherwise)
-  return (data as HousemateProfile[]).sort((a, b) => {
-    const ra = a.content?.housemate?.reveal_order ?? 999;
-    const rb = b.content?.housemate?.reveal_order ?? 999;
-    return ra - rb;
-  });
-}
+          <div className="lg:col-span-2">
+            <Link href={`/newsroom/${featured.slug}`} className="group block">
+              <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
+                {featured.cover_image_url && (
+                  <Image
+                    src={featured.cover_image_url}
+                    alt={featured.title}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                )}
+              </div>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-orange-600">
+                {featured.insight_categories?.name ?? 'News'} <span className="text-gray-400">/ {timeAgo(featured.published_at)}</span>
+              </p>
+              <h2 className="mt-1 text-2xl font-bold leading-tight group-hover:underline">
+                {featured.title}
+              </h2>
+              {featured.excerpt && <p className="mt-2 text-gray-600">{featured.excerpt}</p>}
+            </Link>
+          </div>
 
-/** Fetch a single published post by slug. */
-export async function getPostBySlug(slug: string) {
-  const { data, error } = await supabasePublic
-    .from('insight_posts')
-    .select(
-      'id, title, slug, excerpt, content, cover_image_url, seo_title, seo_description, canonical_url, published_at'
-    )
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .single();
+          <div className="lg:col-span-1">
+            <h2 className="mb-3 border-b-2 border-orange-500 pb-2 text-sm font-bold uppercase tracking-wide">
+              Recent Posts
+            </h2>
+            <div className="divide-y divide-gray-100">
+              {rightList.map((post) => (
+                <NewsListItem key={post.id} post={post} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-  if (error) return null;
-  return data as HousemateProfile;
+      {gridPosts.length > 0 && (
+        <div className="mt-14 grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4">
+          {gridPosts.map((post) => (
+            <Link key={post.id} href={`/newsroom/${post.slug}`} className="group block">
+              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg bg-gray-100">
+                {post.cover_image_url && (
+                  <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+                )}
+              </div>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-orange-600">
+                {post.insight_categories?.name ?? 'News'}
+              </p>
+              <h3 className="font-semibold group-hover:underline">{post.title}</h3>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {posts.length === 0 && (
+        <p className="text-gray-500">No articles published yet — check back soon.</p>
+      )}
+      </main>
+
+      <FeaturedPlaces title="Featured Places" places={chrome.featuredPlaces} />
+      <Footer />
+    </>
+  );
 }
