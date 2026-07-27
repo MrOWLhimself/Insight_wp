@@ -16,6 +16,10 @@ import {
   stripHtml,
   decodeEntities,
 } from "@/lib/wordpress";
+import {
+  getPostBySlug as getInsightPostBySlug,
+  getAllPublishedPosts,
+} from "@/lib/supabase-public";
 import { getNavMenu, getSiteSettings, type NavMenuItem } from "@/lib/supabase";
 import Masthead from "@/components/Masthead";
 import Footer from "@/components/Footer";
@@ -24,6 +28,7 @@ import ShareCard from "@/components/ShareCard";
 import Comments from "@/components/Comments";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import RelatedPosts from "@/components/RelatedPosts";
+import Gallery from "@/components/Gallery";
 import { HeroStory, StoryCard } from "@/components/StoryCard";
 import { SITE_URL } from "@/lib/config";
 
@@ -33,10 +38,11 @@ type Props = { params: Promise<{ slug: string }> };
 
 // No "/posts/" or "/category/" prefix — a single flat namespace, same as
 // WordPress's own default permalink style. A given slug is resolved as a
-// post first (posts vastly outnumber categories, and this matches how
-// WordPress itself prioritizes a matching post/page over a category
-// archive when a slug could technically be either), then as a category,
-// then 404.
+// WordPress post first (posts vastly outnumber categories, and this matches
+// how WordPress itself prioritizes a matching post/page over a category
+// archive when a slug could technically be either), then as a WordPress
+// category, then as a Supabase-authored post (Newsroom / BBNaija S11 /
+// any future insight_posts content), then 404.
 
 function navFallback(categories: { id: number; name: string; slug: string }[]): NavMenuItem[] {
   return categories.map((c, i) => ({
@@ -87,6 +93,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const insightPost = await getInsightPostBySlug(slug);
+  if (insightPost) {
+    return {
+      title: insightPost.seo_title || insightPost.title,
+      description: insightPost.seo_description || insightPost.excerpt || undefined,
+      alternates: { canonical: insightPost.canonical_url || `${SITE_URL}/${insightPost.slug}` },
+      openGraph: {
+        title: insightPost.seo_title || insightPost.title,
+        description: insightPost.seo_description || insightPost.excerpt || undefined,
+        images: insightPost.cover_image_url ? [insightPost.cover_image_url] : undefined,
+        url: insightPost.canonical_url || `${SITE_URL}/${insightPost.slug}`,
+        type: "article",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: insightPost.seo_title || insightPost.title,
+        description: insightPost.seo_description || insightPost.excerpt || undefined,
+        images: insightPost.cover_image_url ? [insightPost.cover_image_url] : undefined,
+      },
+    };
+  }
+
   return {};
 }
 
@@ -112,6 +140,16 @@ function chunkArticleByParagraphs(html: string, perChunk: number) {
   return chunks.filter((c) => c.length > 0);
 }
 
+// Same idea for our own paragraph-array body format used by Supabase posts.
+function chunkParagraphBlocks(body: { type: string; text: string }[], perChunk: number) {
+  const paragraphs = body.filter((b) => b.type === "paragraph");
+  const chunks: { type: string; text: string }[][] = [];
+  for (let i = 0; i < paragraphs.length; i += perChunk) {
+    chunks.push(paragraphs.slice(i, i + perChunk));
+  }
+  return chunks;
+}
+
 export default async function SlugPage({ params }: Props) {
   const { slug } = await params;
 
@@ -120,6 +158,9 @@ export default async function SlugPage({ params }: Props) {
 
   const category = await getCategoryBySlug(slug);
   if (category) return <CategoryView category={category} />;
+
+  const insightPost = await getInsightPostBySlug(slug);
+  if (insightPost) return <InsightPostView post={insightPost} />;
 
   notFound();
 }
@@ -281,6 +322,167 @@ async function PostView({ post }: { post: Awaited<ReturnType<typeof getPostBySlu
       <RelatedPosts posts={relatedPosts.filter((p) => p.id !== post.id)} />
 
       <Comments postId={post.id} initialComments={comments} />
+
+      <Footer />
+    </>
+  );
+}
+
+// ============================= Insight (Supabase) Post View =============================
+//
+// Same visual shell as PostView above (dark hero header, breadcrumbs, ad
+// slots, sticky sidebar with Recent Posts, ShareCard, Footer) but sourced
+// from Supabase (insight_posts) instead of WordPress, and rendering our
+// paragraph-array body format instead of raw HTML. This is what makes
+// /bbnaija-season-11-house-first-look (no folder prefix) work, alongside
+// any future post I publish to Newsroom or BBNaija S11.
+
+async function InsightPostView({
+  post,
+}: {
+  post: NonNullable<Awaited<ReturnType<typeof getInsightPostBySlug>>>;
+}) {
+  const [categories, navItems, siteSettings, recentAll] = await Promise.all([
+    getCategories(),
+    getNavMenu(),
+    getSiteSettings(),
+    getAllPublishedPosts(10),
+  ]);
+
+  const body = (post.content as any)?.body ?? [];
+  const gallery: string[] = (post.content as any)?.gallery ?? [];
+  const bodyChunks = chunkParagraphBlocks(body, 4);
+  const recentPosts = recentAll.filter((p) => p.slug !== post.slug).slice(0, 5);
+  const categoryName = post.insight_categories?.name ?? "News";
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.seo_title || post.title,
+    description: post.seo_description || post.excerpt || undefined,
+    image: post.cover_image_url || undefined,
+    datePublished: post.published_at || undefined,
+    dateModified: post.published_at || undefined,
+    mainEntityOfPage: post.canonical_url || undefined,
+    author: { "@type": "Organization", name: "Insight Magazine" },
+    publisher: { "@type": "Organization", name: "Insight Magazine" },
+  };
+
+  return (
+    <>
+      <Masthead
+        navItems={navItems.length > 0 ? navItems : navFallback(categories)}
+        siteSettings={siteSettings}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: categoryName },
+          { label: post.title },
+        ]}
+      />
+
+      <div className="bg-charcoal text-center py-16 px-6">
+        <Link href="/" className="eyebrow">
+          {categoryName}
+        </Link>
+        <h1 className="font-display font-extrabold text-4xl md:text-5xl leading-[1.1] text-white mt-4 mb-5 max-w-4xl mx-auto">
+          {post.title}
+        </h1>
+        {post.excerpt && (
+          <p className="italic text-lg md:text-xl leading-relaxed text-[#C7C7CC] max-w-2xl mx-auto mb-6">
+            {post.excerpt}
+          </p>
+        )}
+        {post.published_at && (
+          <div className="flex items-center justify-center gap-3">
+            <span className="font-mono uppercase text-xs tracking-eyebrow text-[#9A9AA0]">
+              Insight Magazine
+            </span>
+            <span className="text-[#9A9AA0]">·</span>
+            <span className="font-mono uppercase text-xs tracking-eyebrow text-[#9A9AA0]">
+              {new Date(post.published_at).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {post.cover_image_url && (
+        <div className="relative w-full max-w-7xl mx-auto aspect-[16/9]">
+          <Image src={post.cover_image_url} alt={post.title} fill priority className="object-cover" />
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-[1fr_300px] gap-14 items-start">
+        <article>
+          {bodyChunks.map((chunk, i) => (
+            <div key={i}>
+              <div className="article-body">
+                {chunk.map((block, j) => (
+                  <p key={j} className="mb-4 leading-relaxed">{block.text}</p>
+                ))}
+              </div>
+              {i < bodyChunks.length - 1 && (
+                <AdSlot
+                  slotKey="insight_article_inline"
+                  size="728×90"
+                  className="h-[120px] my-2 mb-8"
+                />
+              )}
+            </div>
+          ))}
+
+          {gallery.length > 0 && (
+            <section className="mt-8">
+              <h2 className="mb-4 text-xl font-bold">Gallery</h2>
+              <Gallery images={gallery} title={post.title} />
+            </section>
+          )}
+        </article>
+
+        <aside className="flex flex-col gap-8 sticky top-6">
+          <AdSlot slotKey="insight_article_sidebar_1" size="300×250" className="h-[250px]" />
+
+          <div>
+            <h3 className="text-xs uppercase tracking-eyebrow text-ink-soft border-b border-rule pb-2.5 mb-4">
+              Recent Posts
+            </h3>
+            <div className="flex flex-col gap-4">
+              {recentPosts.map((p) => (
+                <Link key={p.id} href={`/${p.slug}`} className="flex gap-3 story-link">
+                  <div className="relative w-16 h-16 flex-shrink-0 bg-ink/5">
+                    {p.cover_image_url && (
+                      <Image src={p.cover_image_url} alt={p.title} fill className="object-cover" />
+                    )}
+                  </div>
+                  <h4 className="story-title font-display font-bold text-sm leading-snug">
+                    {p.title}
+                  </h4>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <AdSlot slotKey="insight_article_sidebar_2" size="300×250" className="h-[250px]" />
+        </aside>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6">
+        <ShareCard
+          title={post.title}
+          imageUrl={post.cover_image_url || undefined}
+          imageAlt={post.title}
+          path={`/${post.slug}`}
+        />
+      </div>
 
       <Footer />
     </>
