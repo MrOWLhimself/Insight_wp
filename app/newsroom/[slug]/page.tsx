@@ -15,6 +15,11 @@ import SideRailAds from '@/components/SideRailAds';
 import FeaturedPlaces from '@/components/FeaturedPlaces';
 import Footer from '@/components/Footer';
 
+type ArticleContent = {
+  body?: { type: string; text: string }[];
+  gallery?: string[];
+};
+
 export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string }> };
@@ -50,6 +55,7 @@ export default async function NewsroomArticlePage({ params }: Props) {
   if (!post) notFound();
 
   const body = post.content?.body ?? [];
+  const gallery = (post.content as ArticleContent)?.gallery ?? [];
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -89,6 +95,19 @@ export default async function NewsroomArticlePage({ params }: Props) {
           block.type === 'paragraph' ? <p key={i} className="mb-4 leading-relaxed">{block.text}</p> : null
         )}
       </article>
+
+      {gallery.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-4 text-xl font-bold">Gallery</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {gallery.map((imgUrl, i) => (
+              <div key={i} className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+                <Image src={imgUrl} alt={`${post.title} — photo ${i + 1}`} fill className="object-cover" />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       </main>
 
       <FeaturedPlaces title="Featured Places" places={chrome.featuredPlaces} />
