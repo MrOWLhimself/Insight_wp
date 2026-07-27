@@ -72,7 +72,7 @@ export async function getAllPublishedPosts(limit = 20) {
       'id, title, slug, excerpt, content, cover_image_url, seo_title, seo_description, canonical_url, published_at, insight_categories(name, slug)'
     )
     .eq('status', 'published')
-    .order('published_at', { ascending: false })
+    .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
   if (error) {
@@ -109,7 +109,7 @@ export async function getCategoryPosts(categorySlug: string) {
     )
     .eq('category', category.id)
     .eq('status', 'published')
-    .order('published_at', { ascending: false });
+    .order('published_at', { ascending: false, nullsFirst: false });
 
   if (error) {
     console.error('getCategoryPosts error:', error.message);
