@@ -5,7 +5,6 @@ import Link from "next/link";
 import parse from "html-react-parser";
 import {
   getPostBySlug,
-  getCategoryBySlug,
   getPosts,
   getCategories,
   getComments,
@@ -24,7 +23,7 @@ import Masthead from "@/components/Masthead";
 import Footer from "@/components/Footer";
 import AdSlot from "@/components/AdSlot";
 import ShareBar from "@/components/ShareBar";
-import { getUnifiedRecentPosts } from "@/lib/unified-posts";
+import { getUnifiedRecentPosts, getUnifiedCategory } from "@/lib/unified-posts";
 import Comments from "@/components/Comments";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import Gallery from "@/components/Gallery";
@@ -78,15 +77,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const category = await getCategoryBySlug(slug);
+  const category = await getUnifiedCategory(slug);
   if (category) {
     return {
-      title: decodeEntities(category.name),
-      description: `${decodeEntities(category.name)} coverage from Insight Magazine by CitiPlug.`,
+      title: category.name,
+      description: `${category.name} coverage from Insight Magazine by CitiPlug.`,
       alternates: { canonical: `${SITE_URL}/${category.slug}` },
       openGraph: {
-        title: decodeEntities(category.name),
-        description: `${decodeEntities(category.name)} coverage from Insight Magazine by CitiPlug.`,
+        title: category.name,
+        description: `${category.name} coverage from Insight Magazine by CitiPlug.`,
         url: `${SITE_URL}/${category.slug}`,
       },
     };
@@ -154,7 +153,7 @@ export default async function SlugPage({ params }: Props) {
   const post = await getPostBySlug(slug);
   if (post) return <PostView post={post} />;
 
-  const category = await getCategoryBySlug(slug);
+  const category = await getUnifiedCategory(slug);
   if (category) return <CategoryView category={category} />;
 
   const insightPost = await getInsightPostBySlug(slug);
@@ -534,18 +533,15 @@ async function InsightPostView({
 async function CategoryView({
   category,
 }: {
-  category: Awaited<ReturnType<typeof getCategoryBySlug>>;
+  category: NonNullable<Awaited<ReturnType<typeof getUnifiedCategory>>>;
 }) {
-  if (!category) notFound();
-
-  const [posts, categories, navItems, siteSettings] = await Promise.all([
-    getPosts({ category: category.id, perPage: 13 }),
+  const [categories, navItems, siteSettings] = await Promise.all([
     getCategories(),
     getNavMenu(),
     getSiteSettings(),
   ]);
 
-  const [lead, ...rest] = posts;
+  const [lead, ...rest] = category.posts;
 
   return (
     <>
@@ -553,19 +549,19 @@ async function CategoryView({
         navItems={navItems.length > 0 ? navItems : navFallback(categories)}
         siteSettings={siteSettings}
       />
-      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: decodeEntities(category.name) }]} />
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: category.name }]} />
 
       <main>
         <div className="max-w-7xl mx-auto px-6 pt-10">
           <h1 className="font-display font-extrabold text-5xl text-ink mb-2">
-            {decodeEntities(category.name)}
+            {category.name}
           </h1>
           <p className="eyebrow border-b border-rule pb-8 mb-10 block">
-            {category.count} stories
+            {category.posts.length} stories
           </p>
         </div>
 
-        {posts.length === 0 ? (
+        {category.posts.length === 0 ? (
           <p className="text-ink-soft max-w-7xl mx-auto px-6 pb-16">
             No stories published in this section yet.
           </p>
