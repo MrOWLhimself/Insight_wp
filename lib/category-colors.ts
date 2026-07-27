@@ -34,6 +34,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   stories: '#f59e0b',
   articles: '#64748b',
   feature: '#0891b2',
+  events: '#f97316',
+  'red carpet': '#be185d',
+  'outdoor event': '#16a34a',
+  concert: '#7c3aed',
+  hangout: '#0ea5e9',
+  heritage: '#92400e',
 };
 
 export function getCategoryColor(name: string | undefined | null): string {
