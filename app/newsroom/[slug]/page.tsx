@@ -123,7 +123,6 @@ export default async function NewsroomArticlePage({ params }: Props) {
       <main className="mx-auto max-w-7xl px-4 py-10">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
 
-          {/* Main content column — takes 2 of 3 grid columns, wider than before */}
           <div className="lg:col-span-2">
             {post.cover_image_url && (
               <div className="relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-lg bg-gray-100">
@@ -142,18 +141,56 @@ export default async function NewsroomArticlePage({ params }: Props) {
             <AdSlot slotKey="insight_newsroom_article_mid" size="728×90" className="my-6 h-[90px] w-full" />
 
             <article className="mt-2 max-w-none text-gray-700">
-              {firstHalf.map((block, i) =>
-                block.type === 'paragraph' ? <p key={i} className="mb-4 leading-relaxed">{block.text}</p> : null
-              )}
+              {firstHalf.map(function (block: any, i: number) {
+                if (block.type === 'image') {
+                  return (
+                    <div key={i} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
+                      <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
+                    </div>
+                  );
+                } else if (block.type === 'heading') {
+                  return <h3 key={i} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>;
+                } else if (block.type === 'list') {
+                  return (
+                    <ol key={i} className="mb-4 list-decimal pl-6 space-y-1">
+                      {(block.items || []).map((item: string, k: number) => (
+                        <li key={k}>{item}</li>
+                      ))}
+                    </ol>
+                  );
+                } else if (block.type === 'paragraph') {
+                  return <p key={i} className="mb-4 leading-relaxed">{block.text}</p>;
+                }
+                return null;
+              })}
             </article>
 
             {secondHalf.length > 0 && (
               <>
                 <AdSlot slotKey="insight_newsroom_article_mid" size="728×90" className="my-6 h-[90px] w-full" />
                 <article className="max-w-none text-gray-700">
-                  {secondHalf.map((block, i) =>
-                    block.type === 'paragraph' ? <p key={`b-${i}`} className="mb-4 leading-relaxed">{block.text}</p> : null
-                  )}
+                  {secondHalf.map(function (block: any, i: number) {
+                    if (block.type === 'image') {
+                      return (
+                        <div key={i} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
+                          <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
+                        </div>
+                      );
+                    } else if (block.type === 'heading') {
+                      return <h3 key={`b-${i}`} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>;
+                    } else if (block.type === 'list') {
+                      return (
+                        <ol key={`b-${i}`} className="mb-4 list-decimal pl-6 space-y-1">
+                          {(block.items || []).map((item: string, k: number) => (
+                            <li key={k}>{item}</li>
+                          ))}
+                        </ol>
+                      );
+                    } else if (block.type === 'paragraph') {
+                      return <p key={`b-${i}`} className="mb-4 leading-relaxed">{block.text}</p>;
+                    }
+                    return null;
+                  })}
                 </article>
               </>
             )}
@@ -177,7 +214,6 @@ export default async function NewsroomArticlePage({ params }: Props) {
             )}
           </div>
 
-          {/* Sidebar — 1 of 3 grid columns */}
           <aside className="lg:col-span-1">
             <AdSlot slotKey="insight_newsroom_sidebar_top" size="300×250" className="mb-8 h-[250px] w-full" />
 
