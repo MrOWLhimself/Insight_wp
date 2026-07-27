@@ -1,4 +1,4 @@
-import { getPosts, getCategories } from "@/lib/wordpress";
+import { getPosts, getCategories, getComparableDate } from "@/lib/wordpress";
 import {
   getHomepageSections,
   getNavMenu,
@@ -117,11 +117,11 @@ export default async function HomePage() {
   const adaptedInsightPosts = allRecentPosts.map(adaptInsightPost);
 
   const heroPosts = [...heroPostsWP, ...adaptedInsightPosts.slice(0, 3)]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => getComparableDate(b) - getComparableDate(a))
     .slice(0, 5);
 
   const latestPosts = [...adaptedInsightPosts.slice(0, 5), ...latestPostsWP]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => getComparableDate(b) - getComparableDate(a))
     .slice(0, 10);
 
   const [lead, ...sideStories] = heroPosts;
