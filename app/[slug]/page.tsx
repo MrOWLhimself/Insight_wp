@@ -24,10 +24,12 @@ import Masthead from "@/components/Masthead";
 import Footer from "@/components/Footer";
 import AdSlot from "@/components/AdSlot";
 import ShareBar from "@/components/ShareBar";
+import CategoryBadge from "@/components/CategoryBadge";
 import { getUnifiedRecentPosts, getUnifiedCategory } from "@/lib/unified-posts";
 import Comments from "@/components/Comments";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import Gallery from "@/components/Gallery";
+import PixiesetEmbed from "@/components/PixiesetEmbed";
 import { HeroStory, StoryCard } from "@/components/StoryCard";
 import { SITE_URL } from "@/lib/config";
 
@@ -225,7 +227,7 @@ async function PostView({ post }: { post: Awaited<ReturnType<typeof getPostBySlu
               </div>
             )}
 
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-orange-600">{categoryName}</p>
+            <CategoryBadge category={categoryName} className="mb-2" />
             <h1 className="text-3xl font-extrabold tracking-tight">{decodeEntities(post.title.rendered)}</h1>
             {deck && <p className="mt-3 text-lg italic text-gray-600">{deck}</p>}
 
@@ -265,6 +267,10 @@ async function PostView({ post }: { post: Awaited<ReturnType<typeof getPostBySlu
               </div>
             )}
 
+            {post.meta?.pixieset_url && (
+              <PixiesetEmbed url={post.meta.pixieset_url} title={decodeEntities(post.title.rendered)} />
+            )}
+
             {recentPosts.length > 0 && (
               <section className="mt-14 border-t border-gray-200 pt-8">
                 <h2 className="mb-6 text-xl font-bold">More Like This</h2>
@@ -278,9 +284,7 @@ async function PostView({ post }: { post: Awaited<ReturnType<typeof getPostBySlu
                             <Image src={pImg.url} alt={pImg.alt} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
                           )}
                         </div>
-                        <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-orange-600">
-                          {primaryCategoryName(p)}
-                        </p>
+                        <CategoryBadge category={primaryCategoryName(p)} className="mt-2" />
                         <h3 className="font-semibold group-hover:underline">{decodeEntities(p.title.rendered)}</h3>
                       </Link>
                     );
@@ -311,9 +315,7 @@ async function PostView({ post }: { post: Awaited<ReturnType<typeof getPostBySlu
                       )}
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
-                        {primaryCategoryName(p)}
-                      </p>
+                        <CategoryBadge category={primaryCategoryName(p)} className="mt-2" />
                       <h3 className="mt-1 text-sm font-semibold leading-snug group-hover:underline">
                         {decodeEntities(p.title.rendered)}
                       </h3>
@@ -351,9 +353,7 @@ function InsightRecentPostRow({ post }: { post: WPPost }) {
         )}
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
-          {primaryCategoryName(post)}
-        </p>
+                      <CategoryBadge category={primaryCategoryName(p)} />
         <h3 className="mt-1 text-sm font-semibold leading-snug group-hover:underline">
           {decodeEntities(post.title.rendered)}
         </h3>
@@ -371,9 +371,7 @@ function InsightRecentPostCard({ post }: { post: WPPost }) {
           <Image src={img.url} alt={img.alt} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
         )}
       </div>
-      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-orange-600">
-        {primaryCategoryName(post)}
-      </p>
+      <CategoryBadge category={primaryCategoryName(post)} className="mt-2" />
       <h3 className="font-semibold group-hover:underline">{decodeEntities(post.title.rendered)}</h3>
     </Link>
   );
@@ -393,6 +391,7 @@ async function InsightPostView({
 
   const body: any[] = (post.content as any)?.body ?? [];
   const gallery: string[] = (post.content as any)?.gallery ?? [];
+  const pixiesetUrl: string | undefined = (post.content as any)?.pixieset_url;
   const [firstHalf, secondHalf] = splitBodyForAd(body);
   const recentPosts = recentAll.filter((p) => p.slug !== post.slug).slice(0, 6);
   const categoryName = post.insight_categories?.name ?? 'News';
@@ -428,7 +427,7 @@ async function InsightPostView({
               </div>
             )}
 
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-orange-600">{categoryName}</p>
+            <CategoryBadge category={categoryName} className="mb-2" />
             <h1 className="text-3xl font-extrabold tracking-tight">{post.title}</h1>
             {post.excerpt && <p className="mt-3 text-lg italic text-gray-600">{post.excerpt}</p>}
 
@@ -499,6 +498,10 @@ async function InsightPostView({
                 <h2 className="mb-4 text-xl font-bold">Gallery</h2>
                 <Gallery images={gallery} title={post.title} />
               </section>
+            )}
+
+            {pixiesetUrl && (
+              <PixiesetEmbed url={pixiesetUrl} title={post.title} />
             )}
 
             {recentPosts.length > 0 && (
