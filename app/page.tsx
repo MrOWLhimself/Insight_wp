@@ -121,11 +121,14 @@ export default async function HomePage() {
   // Posts, not just live in its own separate section.
   const adaptedInsightPosts = allRecentPosts.map(adaptInsightPost);
 
-  const heroPosts = [...heroPostsWP, ...adaptedInsightPosts.slice(0, 3)]
+  // No per-source quota here on purpose — every post, WordPress or
+  // Supabase, competes purely on real publish date. Whichever source
+  // published more recently wins the slot, full stop.
+  const heroPosts = [...heroPostsWP, ...adaptedInsightPosts]
     .sort((a, b) => getComparableDate(b) - getComparableDate(a))
     .slice(0, 5);
 
-  const latestPosts = [...adaptedInsightPosts.slice(0, 5), ...latestPostsWP]
+  const latestPosts = [...adaptedInsightPosts, ...latestPostsWP]
     .sort((a, b) => getComparableDate(b) - getComparableDate(a))
     .slice(0, 10);
 
@@ -249,17 +252,14 @@ export default async function HomePage() {
         {newsroomHomepagePosts.length > 0 && (
           <div className="max-w-7xl mx-auto px-6">
             <section className="my-14">
-              <div className="flex items-center justify-between border-b border-rule pb-3 mb-8">
+              <div className="border-b border-rule pb-3 mb-8">
                 <h2 className="font-display font-extrabold text-3xl text-ink">
                   Newsroom
                 </h2>
-                <Link href="/newsroom" className="text-sm font-semibold underline">
-                  See all →
-                </Link>
               </div>
               <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12">
                 {newsroomHomepagePosts.map((post) => (
-                  <Link key={post.id} href={`/newsroom/${post.slug}`} className="group block">
+                  <Link key={post.id} href={`/${post.slug}`} className="group block">
                     <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg bg-gray-100">
                       {post.cover_image_url && (
                         <Image
