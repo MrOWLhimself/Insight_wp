@@ -27,6 +27,7 @@ import LatestPosts from "@/components/LatestPosts";
 import Link from "next/link";
 import Image from "next/image";
 import { SITE_URL } from "@/lib/config";
+import { adaptInsightPost } from "@/lib/insight-wp-adapter";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -99,7 +100,7 @@ export default async function HomePage() {
     .filter((s) => (s.display_type === "grid" || s.display_type === "promo" || s.display_type === "places") && s.enabled)
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  const [heroPosts, spotlightPosts, latestPosts, flexiblePostsBySection] = await Promise.all([
+  const [heroPostsWP, spotlightPosts, latestPostsWP, flexiblePostsBySection] = await Promise.all([
     postsFor(hero, 5),
     postsFor(spotlight, 4),
     getPosts({ perPage: 10 }),
@@ -107,6 +108,21 @@ export default async function HomePage() {
       flexibleSections.map((s) => (s.display_type === "grid" ? postsFor(s, 4) : Promise.resolve([])))
     ),
   ]);
+
+  // Adapt a few of the most recent Supabase-authored posts (Newsroom,
+  // BBNaija S11, any future insight_posts content) into the same shape as
+  // a WordPress post, then merge them in by publish date — so a post I
+  // publish can genuinely lead the homepage hero or show up in Latest
+  // Posts, not just live in its own separate section.
+  const adaptedInsightPosts = allRecentPosts.map(adaptInsightPost);
+
+  const heroPosts = [...heroPostsWP, ...adaptedInsightPosts.slice(0, 3)]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  const latestPosts = [...adaptedInsightPosts.slice(0, 5), ...latestPostsWP]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 10);
 
   const [lead, ...sideStories] = heroPosts;
 
