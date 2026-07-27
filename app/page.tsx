@@ -26,6 +26,7 @@ import { HeroStory, HeroSideCard, StoryCard } from "@/components/StoryCard";
 import LatestPosts from "@/components/LatestPosts";
 import Link from "next/link";
 import Image from "next/image";
+import CategoryBadge from "@/components/CategoryBadge";
 import { SITE_URL } from "@/lib/config";
 import { adaptInsightPost } from "@/lib/insight-wp-adapter";
 import type { Metadata } from "next";
@@ -271,9 +272,7 @@ export default async function HomePage() {
                         />
                       )}
                     </div>
-                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-orange-600">
-                      {post.insight_categories?.name ?? "News"}
-                    </p>
+                    <CategoryBadge category={post.insight_categories?.name ?? "News"} className="mt-2" />
                     <h3 className="font-semibold group-hover:underline">{post.title}</h3>
                     {post.excerpt && (
                       <p className="text-sm text-gray-500 line-clamp-2">{post.excerpt}</p>
