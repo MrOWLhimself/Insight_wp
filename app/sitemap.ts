@@ -11,12 +11,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getAllPublishedPosts(200),
   ]);
 
-  const postEntries = posts.map((post) => ({
-    url: `${SITE_URL}/${post.slug}`,
-    lastModified: new Date(post.date),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+  const postEntries = posts.map((post) => {
+    const parsedDate = post.date ? new Date(post.date) : null;
+    const validDate = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+    return {
+      url: `${SITE_URL}/${post.slug}`,
+      lastModified: validDate,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    };
+  });
 
   const categoryEntries = categories.map((cat) => ({
     url: `${SITE_URL}/${cat.slug}`,
@@ -36,12 +40,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // any future content published straight to insight_posts). These resolve
   // through the same /[slug] fallback as WordPress posts, so the URL shape
   // matches exactly — no separate /newsroom or /bbnaija-s11 prefix needed.
-  const insightEntries = insightPosts.map((post) => ({
-    url: `${SITE_URL}/${post.slug}`,
-    lastModified: post.published_at ? new Date(post.published_at) : new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+  const insightEntries = insightPosts.map((post) => {
+    const parsedDate = post.published_at ? new Date(post.published_at) : null;
+    const validDate = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+    return {
+      url: `${SITE_URL}/${post.slug}`,
+      lastModified: validDate,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    };
+  });
 
   // The two Supabase-backed landing pages themselves.
   const insightLandingEntries = [
