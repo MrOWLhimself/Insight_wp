@@ -14,6 +14,7 @@ import {
   authorName,
   stripHtml,
   decodeEntities,
+  type WPPost,
 } from "@/lib/wordpress";
 import {
   getPostBySlug as getInsightPostBySlug,
@@ -340,36 +341,40 @@ async function PostView({ post }: { post: Awaited<ReturnType<typeof getPostBySlu
 // WordPress-style dark hero — so every post, WordPress or Supabase, looks
 // consistent when reached at its plain /slug URL (no folder prefix).
 
-function InsightRecentPostRow({ post }: { post: any }) {
+function InsightRecentPostRow({ post }: { post: WPPost }) {
+  const img = featuredImage(post);
   return (
     <Link href={`/${post.slug}`} className="group flex gap-3 py-3">
       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-gray-100">
-        {post.cover_image_url && (
-          <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" />
+        {img && (
+          <Image src={img.url} alt={img.alt} fill className="object-cover" />
         )}
       </div>
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
-          {post.insight_categories?.name ?? 'News'}
+          {primaryCategoryName(post)}
         </p>
-        <h3 className="mt-1 text-sm font-semibold leading-snug group-hover:underline">{post.title}</h3>
+        <h3 className="mt-1 text-sm font-semibold leading-snug group-hover:underline">
+          {decodeEntities(post.title.rendered)}
+        </h3>
       </div>
     </Link>
   );
 }
 
-function InsightRecentPostCard({ post }: { post: any }) {
+function InsightRecentPostCard({ post }: { post: WPPost }) {
+  const img = featuredImage(post);
   return (
     <Link href={`/${post.slug}`} className="group block">
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg bg-gray-100">
-        {post.cover_image_url && (
-          <Image src={post.cover_image_url} alt={post.title} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+        {img && (
+          <Image src={img.url} alt={img.alt} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
         )}
       </div>
       <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-orange-600">
-        {post.insight_categories?.name ?? 'News'}
+        {primaryCategoryName(post)}
       </p>
-      <h3 className="font-semibold group-hover:underline">{post.title}</h3>
+      <h3 className="font-semibold group-hover:underline">{decodeEntities(post.title.rendered)}</h3>
     </Link>
   );
 }
