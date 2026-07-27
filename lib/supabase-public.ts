@@ -59,6 +59,29 @@ export type HousemateProfile = {
   published_at: string | null;
 };
 
+export type PublishedPost = HousemateProfile & {
+  insight_categories?: { name: string; slug: string } | null;
+};
+
+/** Fetch the most recent published posts across ALL categories, with each
+ *  post's category name/slug attached — used for the Newsroom landing page. */
+export async function getAllPublishedPosts(limit = 20) {
+  const { data, error } = await supabasePublic
+    .from('insight_posts')
+    .select(
+      'id, title, slug, excerpt, content, cover_image_url, seo_title, seo_description, canonical_url, published_at, insight_categories(name, slug)'
+    )
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getAllPublishedPosts error:', error.message);
+    return [];
+  }
+  return data as unknown as PublishedPost[];
+}
+
 /** Fetch a category's own metadata (name, description) by slug. */
 export async function getCategoryInfo(categorySlug: string) {
   const { data } = await supabasePublic
