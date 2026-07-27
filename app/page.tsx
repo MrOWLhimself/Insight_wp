@@ -8,7 +8,11 @@ import {
   type HomepageSection,
   type NavMenuItem,
 } from "@/lib/supabase";
-import { getCategoryPosts } from "@/lib/supabase-public";
+import {
+  getCategoryPosts,
+  getAllPublishedPosts,
+  type PublishedPost,
+} from "@/lib/supabase-public";
 import Masthead from "@/components/Masthead";
 import Footer from "@/components/Footer";
 import AdSlot from "@/components/AdSlot";
@@ -63,7 +67,7 @@ function navFallback(categories: { id: number; name: string; slug: string }[]): 
 }
 
 export default async function HomePage() {
-  const [categories, sections, navItems, siteSettings, promoCards, featuredPlaces, bbnaijaPosts, newsroomPosts] =
+  const [categories, sections, navItems, siteSettings, promoCards, featuredPlaces, bbnaijaPosts, allRecentPosts] =
     await Promise.all([
       getCategories(),
       getHomepageSections(),
@@ -72,7 +76,7 @@ export default async function HomePage() {
       getPromoCards(),
       getFeaturedPlaces(),
       getCategoryPosts("bbnaija-s11"),
-      getCategoryPosts("newsroom"),
+      getAllPublishedPosts(20),
     ]);
 
   const hero = sections.find((s) => s.display_type === "hero" && s.enabled);
@@ -82,8 +86,11 @@ export default async function HomePage() {
   // Show the 4 most recently published BBNaija profiles on the homepage.
   const bbnaijaHomepagePosts = bbnaijaPosts.slice(0, 4);
 
-  // Show the 4 most recent Newsroom articles on the homepage.
-  const newsroomHomepagePosts = newsroomPosts.slice(0, 4);
+  // Newsroom section: latest posts across all categories EXCEPT bbnaija-s11
+  // (that has its own dedicated section right above this one already).
+  const newsroomHomepagePosts = allRecentPosts
+    .filter((p) => p.insight_categories?.slug !== "bbnaija-s11")
+    .slice(0, 4);
 
   // "Flexible" sections render in the middle of the page, in whatever
   // order they're arranged in the CitiPlug admin's Insight → Sections tab —
@@ -243,7 +250,10 @@ export default async function HomePage() {
                         />
                       )}
                     </div>
-                    <h3 className="mt-2 font-semibold group-hover:underline">{post.title}</h3>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-orange-600">
+                      {post.insight_categories?.name ?? "News"}
+                    </p>
+                    <h3 className="font-semibold group-hover:underline">{post.title}</h3>
                     {post.excerpt && (
                       <p className="text-sm text-gray-500 line-clamp-2">{post.excerpt}</p>
                     )}
