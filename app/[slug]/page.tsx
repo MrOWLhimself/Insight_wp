@@ -141,13 +141,12 @@ function chunkArticleByParagraphs(html: string, perChunk: number) {
 }
 
 // Same idea for our own paragraph-array body format used by Supabase posts.
-function chunkParagraphBlocks(body: { type: string; text: string }[], perChunk: number) {
-  const paragraphs = body.filter((b) => b.type === "paragraph");
-  const chunks: { type: string; text: string }[][] = [];
-  for (let i = 0; i < paragraphs.length; i += perChunk) {
-    chunks.push(paragraphs.slice(i, i + perChunk));
-  }
-  return chunks;
+// Body blocks can be paragraphs or inline images now. This just splits the
+// full ordered array roughly in half so an <AdSlot> can sit between them —
+// it no longer filters out non-paragraph blocks like the old version did.
+function splitBodyForAd<T>(body: T[]): [T[], T[]] {
+  const midpoint = Math.ceil(body.length / 2);
+  return [body.slice(0, midpoint), body.slice(midpoint)];
 }
 
 export default async function SlugPage({ params }: Props) {
@@ -351,7 +350,7 @@ async function InsightPostView({
 
   const body = (post.content as any)?.body ?? [];
   const gallery: string[] = (post.content as any)?.gallery ?? [];
-  const bodyChunks = chunkParagraphBlocks(body, 4);
+  const [firstHalf, secondHalf] = splitBodyForAd(body);
   const recentPosts = recentAll.filter((p) => p.slug !== post.slug).slice(0, 5);
   const categoryName = post.insight_categories?.name ?? "News";
 
@@ -423,22 +422,50 @@ async function InsightPostView({
 
       <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-[1fr_300px] gap-14 items-start">
         <article>
-          {bodyChunks.map((chunk, i) => (
-            <div key={i}>
+          <div className="article-body">
+            {firstHalf.map((block, j) =>
+              block.type === "image" ? (
+                <div key={j} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
+                  <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
+                </div>
+              ) : block.type === "heading" ? (
+                <h3 key={j} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>
+              ) : block.type === "list" ? (
+                <ol key={j} className="mb-4 list-decimal pl-6 space-y-1">
+                  {(block.items || []).map((item: string, k: number) => (
+                    <li key={k}>{item}</li>
+                  ))}
+                </ol>
+              ) : (
+                <p key={j} className="mb-4 leading-relaxed">{block.text}</p>
+              )
+            )}
+          </div>
+
+          {secondHalf.length > 0 && (
+            <>
+              <AdSlot slotKey="insight_article_inline" size="728×90" className="h-[120px] my-2 mb-8" />
               <div className="article-body">
-                {chunk.map((block, j) => (
-                  <p key={j} className="mb-4 leading-relaxed">{block.text}</p>
-                ))}
+                {secondHalf.map((block, j) =>
+                  block.type === "image" ? (
+                    <div key={j} className="relative my-6 aspect-[16/10] w-full overflow-hidden rounded-lg bg-gray-100">
+                      <Image src={block.url} alt={block.alt || post.title} fill className="object-cover" />
+                    </div>
+                  ) : block.type === "heading" ? (
+                    <h3 key={`b-${j}`} className="mt-8 mb-3 text-xl font-bold">{block.text}</h3>
+                  ) : block.type === "list" ? (
+                    <ol key={`b-${j}`} className="mb-4 list-decimal pl-6 space-y-1">
+                      {(block.items || []).map((item: string, k: number) => (
+                        <li key={k}>{item}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p key={`b-${j}`} className="mb-4 leading-relaxed">{block.text}</p>
+                  )
+                )}
               </div>
-              {i < bodyChunks.length - 1 && (
-                <AdSlot
-                  slotKey="insight_article_inline"
-                  size="728×90"
-                  className="h-[120px] my-2 mb-8"
-                />
-              )}
-            </div>
-          ))}
+            </>
+          )}
 
           {gallery.length > 0 && (
             <section className="mt-8">
