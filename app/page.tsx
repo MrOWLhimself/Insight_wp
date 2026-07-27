@@ -85,7 +85,12 @@ export default async function HomePage() {
   const latest = sections.find((s) => s.display_type === "latest" && s.enabled);
 
   // Show the 4 most recently published BBNaija profiles on the homepage.
-  const bbnaijaHomepagePosts = bbnaijaPosts.slice(0, 4);
+  // Rotate which 4 housemates show, instead of always the same first 4 by
+  // reveal_order — reshuffled each time this page revalidates (every 5
+  // minutes per the `revalidate` export above).
+  const bbnaijaHomepagePosts = [...bbnaijaPosts]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 4);
 
   // Newsroom section: latest posts across all categories EXCEPT bbnaija-s11
   // (that has its own dedicated section right above this one already).
@@ -164,15 +169,15 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-6 py-10">
           {lead && (
             <section className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-14 items-start">
-              <div className="flex flex-col gap-10">
+              <div className="flex flex-col gap-10 order-1">
                 {sideStories.slice(0, 2).map((post) => (
                   <HeroSideCard key={post.id} post={post} />
                 ))}
               </div>
-              <div className="col-span-2">
+              <div className="col-span-2 order-3 md:order-2">
                 <HeroStory post={lead} />
               </div>
-              <div className="flex flex-col gap-10">
+              <div className="flex flex-col gap-10 order-2 md:order-3">
                 {sideStories.slice(2, 4).map((post) => (
                   <HeroSideCard key={post.id} post={post} />
                 ))}
