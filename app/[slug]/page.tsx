@@ -353,7 +353,7 @@ function InsightRecentPostRow({ post }: { post: WPPost }) {
         )}
       </div>
       <div>
-                      <CategoryBadge category={primaryCategoryName(p)} />
+                      <CategoryBadge category={primaryCategoryName(post)} />
         <h3 className="mt-1 text-sm font-semibold leading-snug group-hover:underline">
           {decodeEntities(post.title.rendered)}
         </h3>
