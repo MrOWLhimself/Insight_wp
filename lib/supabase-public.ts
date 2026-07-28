@@ -92,7 +92,11 @@ export async function getCategoryInfo(categorySlug: string) {
   return data;
 }
 
-/** Fetch all published posts in a category, ordered by reveal_order. */
+/** Fetch all published posts in a category, ordered by reveal_order.
+ *  Matches BOTH the post's primary category AND any post that lists this
+ *  category slug in content.secondary_categories - so a post can genuinely
+ *  belong to more than one category page (e.g. "News" + "Ijebu") without
+ *  needing a second full category system. */
 export async function getCategoryPosts(categorySlug: string) {
   const { data: category } = await supabasePublic
     .from('insight_categories')
@@ -100,14 +104,15 @@ export async function getCategoryPosts(categorySlug: string) {
     .eq('slug', categorySlug)
     .single();
 
-  if (!category) return [];
+  const orClauses = [`content->secondary_categories.cs.["${categorySlug}"]`];
+  if (category) orClauses.unshift(`category.eq.${category.id}`);
 
   const { data, error } = await supabasePublic
     .from('insight_posts')
     .select(
       'id, title, slug, excerpt, content, cover_image_url, seo_title, seo_description, canonical_url, published_at'
     )
-    .eq('category', category.id)
+    .or(orClauses.join(','))
     .eq('status', 'published')
     .order('published_at', { ascending: false, nullsFirst: false });
 
