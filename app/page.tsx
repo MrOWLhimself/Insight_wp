@@ -106,7 +106,7 @@ export default async function HomePage() {
     .filter((s) => (s.display_type === "grid" || s.display_type === "promo" || s.display_type === "places") && s.enabled)
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  const [heroPostsWP, spotlightPosts, latestPostsWP, flexiblePostsBySection] = await Promise.all([
+  const [heroPostsWP, spotlightPosts, latestPostsWP, flexiblePostsBySectionWP] = await Promise.all([
     postsFor(hero, 5),
     postsFor(spotlight, 4),
     getPosts({ perPage: 10 }),
@@ -114,6 +114,21 @@ export default async function HomePage() {
       flexibleSections.map((s) => (s.display_type === "grid" ? postsFor(s, 4) : Promise.resolve([])))
     ),
   ]);
+
+  // The "Ijebu" flexible section (WordPress-only by default, like every
+  // other flexible grid section) also gets Supabase Ijebu-tagged posts
+  // merged in here, by real publish date - same pattern as BBNaija S11 and
+  // Newsroom below, just applied to this one admin-configured section
+  // instead of a hardcoded one.
+  const ijebuSupabasePosts = (await getCategoryPosts("ijebu")).map(adaptInsightPost);
+  const flexiblePostsBySection = flexiblePostsBySectionWP.map((wpPosts, i) => {
+    const section = flexibleSections[i];
+    const isIjebuSection = section.label?.toLowerCase().includes("ijebu");
+    if (!isIjebuSection) return wpPosts;
+    return [...wpPosts, ...ijebuSupabasePosts]
+      .sort((a, b) => getComparableDate(b) - getComparableDate(a))
+      .slice(0, 4);
+  });
 
   // Adapt a few of the most recent Supabase-authored posts (Newsroom,
   // BBNaija S11, any future insight_posts content) into the same shape as
@@ -289,9 +304,16 @@ export default async function HomePage() {
             {section.display_type === "grid" ? (
               <div className="max-w-7xl mx-auto px-6">
                 <section className="my-14">
-                  <h2 className="font-display font-extrabold text-3xl text-ink border-b border-rule pb-3 mb-8">
-                    {section.label}
-                  </h2>
+                  <div className="flex items-end justify-between border-b border-rule pb-3 mb-8">
+                    <h2 className="font-display font-extrabold text-3xl text-ink">
+                      {section.label}
+                    </h2>
+                    {section.label?.toLowerCase().includes("ijebu") && (
+                      <Link href="/ijebu-city" className="whitespace-nowrap text-sm font-semibold underline">
+                        See all &rarr;
+                      </Link>
+                    )}
+                  </div>
                   <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12">
                     {flexiblePostsBySection[i].map((post) => (
                       <StoryCard key={post.id} post={post} />
