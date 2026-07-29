@@ -398,7 +398,7 @@ async function InsightPostView({
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": "NewsArticle",
     headline: post.seo_title || post.title,
     description: post.seo_description || post.excerpt || undefined,
     image: post.cover_image_url || undefined,
